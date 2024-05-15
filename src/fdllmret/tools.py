@@ -2,12 +2,23 @@ import json
 from typing import Dict, List
 
 from fdllm.tooluse import Tool, ToolParam, ToolItem
+from pydantic import Field
 
 from .datastore.datastore import DataStore
 from .helpers import db_query, suppmat_query, format_query_results
 
 
 class QueryCatalogue(Tool):
+    def __init__(
+        self,
+        tags: List[str] = ["guides", "research", "reviews"],
+        chunksizes: List[int] = [200, 400, 600, 800, 1000],
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.params["tags"].items.enum = tags
+        self.params["chunksize"].items.enum = chunksizes
+
     name = "query_catalogue"
     description = (
         f"Query chunks of text from the catalogue by description."
@@ -26,7 +37,7 @@ class QueryCatalogue(Tool):
         ),
         "tags": ToolParam(
             type="array",
-            items=ToolItem(type="string", enum=["guides", "research", "reviews"]),
+            items=ToolItem(type="string"),
             description="Tags to filter results by. Only results with these tags will be included.",
             required=True,
         ),
@@ -47,7 +58,7 @@ class QueryCatalogue(Tool):
         ),
         "chunksize": ToolParam(
             type="array",
-            items=ToolItem(type="integer", enum=[200, 400, 600, 800, 1000]),
+            items=ToolItem(type="integer"),
             description=(
                 "Chunksizes to filter results by. Only results of these chunksizes will be included."
                 " Smaller chunks are better for finding a broad array of different documents, wheareas larger chunks"
@@ -139,6 +150,8 @@ class QuerySuppMat(Tool):
     top_k: int = 80
     clean_results: bool = True
     verbose: int = 0
+    tags: List[str] = Field(default_factory=lambda:["supporting material"])
+    chunksizes: List[int] = Field(default_factory=lambda:[1000])
 
     def execute(self, **params):
         return super().execute(**params)
@@ -149,6 +162,8 @@ class QuerySuppMat(Tool):
             json_db=self.json_database,
             top_k=self.top_k,
             clean_results=self.clean_results,
+            tags=self.tags,
+            chunksizes=self.chunksizes,
             **params,
         )
         return json.dumps(format_query_results(out))

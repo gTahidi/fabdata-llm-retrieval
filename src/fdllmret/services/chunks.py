@@ -2,6 +2,7 @@ from typing import Dict, List, Optional, Tuple
 import uuid
 from ..models.models import Document, DocumentChunk, DocumentChunkMetadata
 
+from tqdm import tqdm
 import tiktoken
 
 from ..services.openai import get_embeddings
@@ -149,7 +150,7 @@ def create_document_chunks(
 
 
 def get_document_chunks(
-    documents: List[Document], chunk_token_size: Optional[int]
+    documents: List[Document], chunk_token_size: Optional[int], verbose: int=0
 ) -> Dict[str, List[DocumentChunk]]:
     """
     Convert a list of documents into a dictionary from document id to list of document chunks.
@@ -184,7 +185,10 @@ def get_document_chunks(
 
     # Get all the embeddings for the document chunks in batches, using get_embeddings
     embeddings: List[List[float]] = []
-    for i in range(0, len(all_chunks), EMBEDDINGS_BATCH_SIZE):
+    chunkiter = list(range(0, len(all_chunks), EMBEDDINGS_BATCH_SIZE))
+    if verbose > 0:
+        chunkiter = tqdm(chunkiter)
+    for i in chunkiter:
         # Get the text of the chunks in the current batch
         batch_texts = [
             chunk.text for chunk in all_chunks[i : i + EMBEDDINGS_BATCH_SIZE]

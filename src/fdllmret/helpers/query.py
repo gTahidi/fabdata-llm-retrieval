@@ -2,19 +2,24 @@ from collections import defaultdict
 from types import SimpleNamespace
 
 import numpy as np
+from fdllm import get_caller
+from fdllm.chat import ChatController
 from fdllm.decorators import delayedretry
 from redis.exceptions import ConnectionError
 
-from .models.models import Query, DocumentMetadataFilter
+from ..models.models import Query, DocumentMetadataFilter
+# from .plugin import RetrievalPlugin
 
 THRESH = 1
-CHUNK_BUDGET = 10
+CHUNK_BUDGET = 2000
 
 async def suppmat_query(
     datastore,
     json_db,
     query,
     IDs,
+    tags=["supporting material"],
+    chunksizes=[1000],
     top_k=80,
     clean_results=True,
 ):
@@ -30,10 +35,10 @@ async def suppmat_query(
             datastore,
             query,
             include_docs=include_docs,
-            chunksize=[1000],
+            chunksize=chunksizes,
             top_k=top_k,
             clean_results=clean_results,
-            tags=["supporting material"],
+            tags=tags,
         )
     else:
         return SimpleNamespace(results=[])
@@ -85,13 +90,12 @@ async def remove_duplicate_results(results, verbose=0):
 
 def format_query_results(results):
     res = sorted((r for r in results if r.score < THRESH), key=lambda x: x.score)
-    cs_cost = {"200": 1, "400": 2, "600": 3, "800": 4, "1000": 5}
     totcost = 0
     res_ = []
     for r in res:
         if totcost <= CHUNK_BUDGET:
             res_.append(r)
-            totcost += cs_cost[r.chunksize]
+            totcost += int(r.chunksize)
         else:
             break
     res = res_

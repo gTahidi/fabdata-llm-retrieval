@@ -10,13 +10,22 @@ name = "fabdata-llm-retrieval"
 version = "0.1.0"
 requires-python = ">=3.8, <=3.12"
 dependencies = [
-    "fabdata-llm @ git+https://github.com/AI-for-Education/fabdata-llm.git@v0.15.0",
+    "fabdata-llm @ git+https://github.com/AI-for-Education/fabdata-llm.git@v0.16.0",
     "python-dotenv == 1.*",
     "pydantic == 2.*",
     "tenacity == 8.2.*",
     "numpy",
-    "redis == 4.5.*"
+    "redis == 4.5.*",
+    "joblib == 1.*",
+    "pypdf == 4.*",
+    "tqdm == 4.*",
+    "pyyaml == 6.*",
+    "pymupdf == 1.24.*",
+    "scikit-learn == 1.4.*",
+    "matplotlib == 3.8.*",
+    "pyqt5 == 5.*",
 ]
 
 [project.scripts]
 fdllmret-process-json = "fdllmret._scripts.process_json:main"
+fdllmret-extract-text-pdfs = "fdllmret._scripts.extract_text_pdfs:main"
