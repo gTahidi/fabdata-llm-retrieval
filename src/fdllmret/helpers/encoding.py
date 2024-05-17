@@ -47,6 +47,7 @@ class DocsetEncoding:
         self.contents = None
         self.enc = None
         self.docembs = None
+        self.supp_tags = None
         self.config = {
             "general": dict(
                 cachedir=cachedir, custom_models_config=custom_models_config
@@ -72,6 +73,47 @@ class DocsetEncoding:
             raise ValueError("Cache settings don't match object settings")
         with open(self.configfile, "w") as f:
             yaml.safe_dump(self.config, f, sort_keys=False)
+
+    def __getitem__(self, docid):
+        doc = self._document(docid)
+        chunks = {doc.id: self.enc[doc.id]}
+        return doc, chunks
+    
+    def __len__(self):
+        return len(self.jsondata)
+
+    def _document(self, docid):
+        if isinstance(docid, int):
+            item = self.jsondata[docid]
+        elif isinstance(docid, str):
+            item = [it for it in self.jsondata if it["id"] == docid]
+            if not item:
+                raise IndexError(f"Invalid index")
+            elif len(item) > 1:
+                raise IndexError(f"{docid} must be unique")
+        id_ = item.get("id", None)
+        text = item.get("text", None)
+        source = item.get("source", None)
+        source_id = item.get("source_id", None)
+        url = item.get("url", None)
+        created_at = item.get("created_at", None)
+        author = item.get("author", None)
+        filename = item.get("filename", None)
+        tag = item.get("tag", None)
+        metadata = DocumentMetadata(
+            source=source,
+            source_id=source_id,
+            url=url,
+            created_at=created_at,
+            author=author,
+            filename=filename,
+            tag=tag,
+        )
+        return Document(
+            id=id_,
+            text=text,
+            metadata=metadata,
+        )
 
     def extract(self):
         if not self._assert_cache_safe():
@@ -191,6 +233,8 @@ class DocsetEncoding:
                 tags.update(chunk.metadata.tag.split(","))
         if not any(tg for tg in tags):
             tags = None
+        else:
+            tags = sorted(tags)
         return tags
 
     def picklefile(self, chunk_size):
@@ -461,7 +505,7 @@ def encode_documents_json(
         for key, val in enc.items():
             fullenc[key].extend(val)
 
-    return fullenc
+    return dict(fullenc)
 
 
 def create_document(docjson):

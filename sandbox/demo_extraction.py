@@ -9,10 +9,7 @@ from fdllmret.helpers.encoding import DocsetEncoding
 ROOT = Path(__file__).resolve().parents[1]
 
 # %%
-register_models(Path.home() / ".fdllm/custom_models.yaml")
-
-# %%
-docenc = DocsetEncoding.from_config(ROOT / "config.yml")
+docenc = DocsetEncoding.from_config(ROOT / "data_config.yml")
 
 # %%
 docenc.docembs.tsne.plot("all")

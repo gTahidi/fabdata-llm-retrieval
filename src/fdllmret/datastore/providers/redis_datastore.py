@@ -35,6 +35,11 @@ REDIS_DOC_PREFIX = os.environ.get("REDIS_DOC_PREFIX", "doc")
 REDIS_DISTANCE_METRIC = os.environ.get("REDIS_DISTANCE_METRIC", "COSINE")
 REDIS_INDEX_TYPE = os.environ.get("REDIS_INDEX_TYPE", "FLAT")
 REDIS_SSL = os.environ.get("REDIS_SSL", False)
+if isinstance(REDIS_SSL, str):
+    if REDIS_SSL.lower() in ["true", "false"]:
+        REDIS_SSL = REDIS_SSL.lower() == "true"
+    else:
+        raise ValueError("Invalid environment vasriable for 'REDIS_SSL'")
 assert REDIS_INDEX_TYPE in ("FLAT", "HNSW")
 
 # OpenAI Ada Embeddings Dimension
