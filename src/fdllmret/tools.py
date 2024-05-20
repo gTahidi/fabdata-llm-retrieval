@@ -120,9 +120,9 @@ class GetReferences(Tool):
         resp = ""
         resp += f"filename: {respd['filename']}\n"
         resp += f"document ID: {respd['id']}\n"
-        resp += f"url: {respd['url']}\n"
-        resp += f"references:\n{json.dumps(respd['refs'], indent=4)}"
-        return json.dumps(respd)
+        resp += f"url: {respd.get('url', None)}\n"
+        resp += f"references:\n{json.dumps(respd.get('refs', {}), indent=4)}"
+        return resp
 
 
 class QuerySuppMat(Tool):

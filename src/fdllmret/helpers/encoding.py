@@ -78,7 +78,7 @@ class DocsetEncoding:
         doc = self._document(docid)
         chunks = {doc.id: self.enc[doc.id]}
         return doc, chunks
-    
+
     def __len__(self):
         return len(self.jsondata)
 
@@ -203,6 +203,7 @@ class DocsetEncoding:
 
     def _apply_tags(self, chunk_size, cluster_labs, tags):
         for c in np.unique(cluster_labs):
+            tagstr = ",".join(tags[c])
             cidx = np.flatnonzero(cluster_labs == c)
             cdocs = [
                 didx
@@ -211,7 +212,10 @@ class DocsetEncoding:
             ]
             for doci in set(cdocs):
                 for chunk in self.enc[doci]:
-                    chunk.metadata.tag = ",".join(tags[c])
+                    chunk.metadata.tag = tagstr
+                for doc in self.jsondata:
+                    if doc["id"] == doci:
+                        doc["tag"] = tagstr
 
     @property
     def configfile(self):
@@ -228,34 +232,55 @@ class DocsetEncoding:
     @property
     def tags(self):
         tags = set()
-        for doc in self.enc.values():
-            for chunk in doc:
-                tags.update(chunk.metadata.tag.split(","))
+        for doc in self.jsondata:
+            tags.update(doc["tag"].split(","))
         if not any(tg for tg in tags):
             tags = None
         else:
             tags = sorted(tags)
         return tags
 
+    @property
+    def chunk_sizes(self):
+        cs = self.config["encoding"]["chunk_size"]
+        if not isinstance(cs, list):
+            cs = [cs]
+        return cs
+
     def picklefile(self, chunk_size):
         pklbase = self._cachedir
         return pklbase / f"{pklbase.name}_encoded_{chunk_size}.pkl"
 
     @classmethod
-    def from_config(cls, config_file: PATHTYPE):
-        config_file = Path(config_file)
-        if config_file.exists():
-            with open(config_file) as f:
-                cfg = yaml.safe_load(f)
-        else:
-            raise OSError(f"{config_file} doesn't exist")
+    def from_config(
+        cls,
+        config_file: Optional[PATHTYPE] = None,
+        config_dict: Optional[dict] = None,
+        extract=True,
+        encode=True,
+    ):
+        if config_file is None and config_dict is None:
+            raise ValueError("Must supply one of config_file or config_dict")
+        if all(cf is not None for cf in [config_file, config_dict]):
+            raise ValueError("Must supply only one of config_file or config_dict")
+        if config_file is not None:
+            config_file = Path(config_file)
+            if config_file.exists():
+                with open(config_file) as f:
+                    cfg = yaml.safe_load(f)
+            else:
+                raise OSError(f"{config_file} doesn't exist")
+        if config_dict is not None:
+            cfg = config_dict
         out = cls(
             **cfg["general"], **cfg["extraction"], **cfg["encoding"], **cfg["tagging"]
         )
-        out.extract()
-        out.encode(verbose=True)
-        if out.config["tagging"]["auto_tag"]:
-            out.auto_tag(**out.config["tagging"]["auto_tag_parameters"])
+        if extract:
+            out.extract()
+        if encode:
+            out.encode(verbose=True)
+            if out.config["tagging"]["auto_tag"]:
+                out.auto_tag(**out.config["tagging"]["auto_tag_parameters"])
         return out
 
     @classmethod
@@ -263,6 +288,16 @@ class DocsetEncoding:
         cachedir = Path(cachedir)
         cfgfile = cachedir / "config.yml"
         return cls.from_config(cfgfile)
+
+    @classmethod
+    async def from_datastore(cls, datastore):
+        config = (await datastore.client.json().get("config", "$"))[0]
+        out = DocsetEncoding.from_config(
+            config_dict=config, extract=False, encode=False
+        )
+        out.jsondata = (await datastore.client.json().get("fulldb", "$"))[0]
+        out.contents = (await datastore.client.json().get("contents", "$"))[0]
+        return out
 
     def to_cache(self):
         with open(self.contentsfile, "w") as f:

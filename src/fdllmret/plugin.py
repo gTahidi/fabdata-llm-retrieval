@@ -8,10 +8,9 @@ from .helpers.encoding import DocsetEncoding
 
 
 async def retrieval_plugin(
-    docenc: DocsetEncoding,
     dbhost: Optional[str] = None,
-    dbport: Optional[int] = None,
-    dbssl: Optional[bool] = None,
+    dbport: Optional[str] = None,
+    dbssl: Optional[str] = None,
     chunksizes: Optional[Union[int, List[int]]] = None,
 ):
     if dbhost is not None:
@@ -21,15 +20,16 @@ async def retrieval_plugin(
     if dbssl is not None:
         os.environ["REDIS_SSL"] = dbssl
 
+    datastore = await get_datastore()
+    docenc = await DocsetEncoding.from_datastore(datastore)
+
     if chunksizes is None:
-        chunksizes = docenc.docembs.chunk_sizes
+        chunksizes = docenc.chunk_sizes
     else:
         if isinstance(chunksizes, int):
             chunksizes = [chunksizes]
-        if not set(chunksizes).issubset(set(docenc.docembs.chunk_sizes)):
+        if not set(chunksizes).issubset(set(docenc.chunk_sizes)):
             raise ValueError("chunksize must be a subset of docenc.docembs.chunk_sizes")
-
-    datastore = await get_datastore()
 
     plugin = RetrievalPlugin(
         datastore=datastore,

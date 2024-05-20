@@ -14,4 +14,4 @@ load_dotenv(override=True)
 
 docenc = DocsetEncoding.from_config(ROOT / "data_config.yml")
 
-asyncio.run(upsert_docenc(docenc))
+asyncio.run(upsert_docenc(docenc, skip_embeddings=True))
