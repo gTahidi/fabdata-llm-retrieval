@@ -7,7 +7,7 @@ packages = [{include = "src"}]
 
 [project]
 name = "fabdata-llm-retrieval"
-version = "0.5.0"
+version = "0.6.0"
 requires-python = ">=3.8, <=3.12"
 dependencies = [
     "fabdata-llm @ git+https://github.com/AI-for-Education/fabdata-llm.git@v0.17.0",
@@ -27,7 +27,3 @@ dependencies = [
     "matplotlib == 3.8.*",
     "pyqt5 == 5.*",
 ]
-
-[project.scripts]
-fdllmret-process-json = "fdllmret._scripts.process_json:main"
-fdllmret-extract-text-pdfs = "fdllmret._scripts.extract_text_pdfs:main"

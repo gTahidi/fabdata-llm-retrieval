@@ -1,0 +1,20 @@
+general:
+  cachedir:
+  custom_models_config:
+
+extraction:
+  folder:
+  extract_refs: False
+  download_refs: False
+  n_jobs:
+  pdfengine:
+  extraction_model:
+
+encoding:
+  embeddingsengine:
+  chunk_size:
+
+tagging:
+  auto_tag: True
+  auto_tag_parameters:
+    chunk_size:

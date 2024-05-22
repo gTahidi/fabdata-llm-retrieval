@@ -1,0 +1,25 @@
+# Global setting (anything set here will be used for all)
+GLOBAL:
+  RESOURCE_GROUP:
+  LOCATION:
+  SLEEP:
+
+# Azure Container Registry for redis container
+ACR:
+  NAME:
+  CONTAINER:
+    NAME:
+    VERSION:
+
+# Azure Container Instance for running redis server
+ACI:
+  NAME:
+  CPU:
+  MEMGB:
+  # Optional (defaults to ACI.NAME)
+  DOMAIN:
+
+# Azure Storage Account for cert and aof
+ASA:
+  NAME:
+  SHARE:
