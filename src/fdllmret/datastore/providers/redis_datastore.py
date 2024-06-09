@@ -6,6 +6,8 @@ import json
 import redis.asyncio as redis
 import numpy as np
 
+from sklearn.metrics.pairwise import cosine_similarity
+
 from redis.commands.search.query import Query as RediSearchQuery
 from redis.commands.search.indexDefinition import IndexDefinition, IndexType
 from redis.commands.search.field import (
@@ -303,6 +305,9 @@ class RedisDataStore(DataStore):
 
         return doc_ids
 
+
+    
+
     async def _query(
         self,
         queries: List[QueryWithEmbedding],
@@ -331,28 +336,69 @@ class RedisDataStore(DataStore):
                 redis_query, {"embedding": embedding}
             )
 
-            # Iterate through the most similar documents
-            for doc in query_response.docs:
-                # Load JSON data
-                doc_json = json.loads(doc.json)
-                # Create document chunk object with score
+            # Preparing for MMR
+            documents = [json.loads(doc.json) for doc in query_response.docs]
+            doc_embeddings = np.array([doc['embedding'] for doc in documents])
+            sentence_vector = query.embedding
+            
+            # Apply MMR
+            selected_docs = self.apply_mmr(sentence_vector, documents, doc_embeddings)
+            
+            for doc in selected_docs:
                 result = DocumentChunkWithScore(
-                    id=doc_json["metadata"]["document_id"],
-                    chunksize=doc_json["chunksize"],
-                    score=doc.score,
-                    text=doc_json["text"],
-                    metadata=doc_json["metadata"],
-                    embedding=doc_json["embedding"],
-                    filename=doc_json["metadata"].get("filename"),
-                    url=doc_json["metadata"].get("url"),
-                    tag=doc_json["metadata"].get("tag"),
+                    id=doc["metadata"]["document_id"],
+                    chunksize=doc["chunksize"],
+                    score=doc["score"],  # Adjust how score is determined as per MMR if necessary
+                    text=doc["text"],
+                    metadata=doc["metadata"],
+                    embedding=doc["embedding"],
+                    filename=doc["metadata"].get("filename"),
+                    url=doc["metadata"].get("url"),
+                    tag=doc["metadata"].get("tag"),
                 )
                 query_results.append(result)
 
-            # Add to overall results
             results.append(QueryResult(query=query.query, results=query_results))
 
         return results
+    
+    
+
+    def apply_mmr(self, sentence_vector, documents, embeddings, lambda_constant=0.5, top_k=10):
+        """
+        Applies Maximal Marginal Relevance (MMR) to re-rank documents based on their embeddings.
+
+        Args:
+            sentence_vector (np.array): The embedding vector of the search query.
+            documents (List[dict]): List of document information including embeddings.
+            embeddings (np.array): Array of embeddings corresponding to the documents.
+            lambda_constant (float): Trade-off parameter (0.0 = all diversity, 1.0 = all relevance).
+            top_k (int): Number of top documents to return after applying MMR.
+
+        Returns:
+            List[dict]: The top_k documents selected by MMR.
+        """
+        selected_indices = []  # Indices of docs selected by MMR
+        remaining_indices = list(range(len(documents)))  # Indices of docs not yet selected
+        selected_documents = []  # Final list of documents to return
+
+        while len(selected_indices) < top_k and remaining_indices:
+            mmr_scores = []
+
+            for idx in remaining_indices:
+                relevance = cosine_similarity([embeddings[idx]], [sentence_vector])[0][0]
+                max_similarity = max([cosine_similarity([embeddings[idx]], [embeddings[sel_idx]])[0][0] for sel_idx in selected_indices], default=0)
+                mmr_score = lambda_constant * relevance - (1 - lambda_constant) * max_similarity
+                mmr_scores.append(mmr_score)
+
+            # Select document with highest MMR score
+            next_idx = remaining_indices[np.argmax(mmr_scores)]
+            selected_indices.append(next_idx)
+            selected_documents.append(documents[next_idx])
+            remaining_indices.remove(next_idx)
+
+        return selected_documents
+
 
     async def _find_keys(self, pattern: str) -> List[str]:
         return [key async for key in self.client.scan_iter(pattern)]
