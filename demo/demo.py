@@ -48,7 +48,7 @@ client.json().set('summarized_conversations', '$', data)
 
 # %%
 # Set up the connection to Redis
-client = redis.Redis(host="4.175.77.222", port=6379, decode_responses=True)
+client = redis.Redis(host="localhost", port=6379, decode_responses=True)
 
 # Fetch the data from Redis
 data = client.json().get('summarized_conversations')
@@ -73,7 +73,7 @@ from redis.commands.search.field import TextField, VectorField
 from redis.commands.search.indexDefinition import IndexDefinition, IndexType
 
 # Connect to Redis
-client = redis.Redis(host='4.175.77.222', port=6379, decode_responses=True)
+client = redis.Redis(host='localhost', port=6379, decode_responses=True)
 
 # Define the schema for the Redis search index
 schema = (
@@ -272,7 +272,7 @@ from redis.commands.search.field import TextField, VectorField
 from redis.commands.search.indexDefinition import IndexDefinition, IndexType
 
 # Connect to Redis
-client = redis.Redis(host='4.175.77.222', port=6379, decode_responses=True)
+client = redis.Redis(host='localhost', port=6379, decode_responses=True)
 
 # Define the schema for the Redis search index
 schema = (
