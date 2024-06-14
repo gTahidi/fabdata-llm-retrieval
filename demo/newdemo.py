@@ -20,7 +20,7 @@ from sentence_transformers import SentenceTransformer
 try:
 
     
-    client = redis.Redis(host='4.175.77.222', port=6379, decode_responses=True)
+    client = redis.Redis(host='localhost', port=6379, decode_responses=True)
     client.ping()
 
     print("connceted successfuly bozo!")
